@@ -1,0 +1,12 @@
+{
+  "name": "asafarim",
+  "version": "1.0.0",
+  "description": "ASafariM - Full Stack Clean Architecture Solution",
+  "main": "index.js",
+  "repository": "https://github.com/asafarim/asafarim-web-repo.git",
+  "author": "Ali Safari <asafarim@outlook.com>",
+  "license": "MIT",
+  "scripts": {
+    "commit": "git add . && python .github/scripts/generate_commit_message.py"
+  }
+}
