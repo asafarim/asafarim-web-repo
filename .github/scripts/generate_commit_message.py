@@ -60,7 +60,10 @@ def generate_commit_message(diff):
             response = client.chat.completions.create(
                 model=gpt_engine, messages=[{"role": "user", "content": prompt}]
             )
-            return response.choices[-1].message.content
+            message = response.choices[-1].message.content
+            # Remove backticks and 'commit message:' prefix if present
+            message = message.strip('`').replace('commit message:', '').strip()
+            return message
         except (OpenAIError, RateLimitError) as e:
             logging.warning(f"Attempt {i + 1}: Error generating commit message using GPT {gpt_engine}: {e}")
             time.sleep(2 ** i)  # Exponential backoff
