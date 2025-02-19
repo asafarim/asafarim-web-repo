@@ -1,16 +1,24 @@
 import subprocess
+import logging
 from openai import OpenAI, OpenAIError, RateLimitError
 from dotenv import load_dotenv
 import os
 import time
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 # Load environment variables from .env file
 load_dotenv()
 
 # Initialize OpenAI client
-client = OpenAI(
-    organization=os.getenv("OPENAI_ORG_ID"), api_key=os.getenv("OPENAI_API_KEY")
-)
+try:
+    client = OpenAI(
+        organization=os.getenv("OPENAI_ORG_ID"), api_key=os.getenv("OPENAI_API_KEY")
+    )
+except Exception as e:
+    logging.error(f"Failed to initialize OpenAI client: {e}")
+    raise SystemExit(e)
 
 
 def get_git_diff():
@@ -21,7 +29,7 @@ def get_git_diff():
         )
         return diff_output
     except subprocess.CalledProcessError as e:
-        print(f"Error getting git diff: {e}")
+        logging.error(f"Error getting git diff: {e}")
         return None
 
 
@@ -53,8 +61,12 @@ def generate_commit_message(diff):
                 model=gpt_engine, messages=[{"role": "user", "content": prompt}]
             )
             return response.choices[-1].message.content
+        except (OpenAIError, RateLimitError) as e:
+            logging.warning(f"Attempt {i + 1}: Error generating commit message using GPT {gpt_engine}: {e}")
+            time.sleep(2 ** i)  # Exponential backoff
         except Exception as e:
-            print(f"Error generating commit message using GPT {gpt_engine}: {e}")
+            logging.error(f"Unexpected error: {e}")
+            break
     return None
 
 
@@ -63,19 +75,19 @@ def main():
     if diff:
         commit_message = generate_commit_message(diff)
         if commit_message:
-            print("Generated Commit Message:")
-            print(commit_message)
+            logging.info("Generated Commit Message:")
+            logging.info(commit_message)
 
             # Create the commit with the generated message
             try:
                 subprocess.run(["git", "commit", "-m", commit_message], check=True)
-                print("Commit created successfully!")
+                logging.info("Commit created successfully!")
             except subprocess.CalledProcessError as e:
-                print(f"Error creating commit: {e}")
+                logging.error(f"Error creating commit: {e}")
         else:
-            print("Failed to generate commit message.")
+            logging.warning("Failed to generate commit message.")
     else:
-        print("No changes to commit.")
+        logging.info("No changes to commit.")
 
 
 if __name__ == "__main__":
